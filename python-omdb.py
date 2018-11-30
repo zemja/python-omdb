@@ -39,14 +39,17 @@ def get_info(title):
         print(f'{NAME}: error: {response["Error"]}', file=sys.stderr)
         return str()
 
-    return f'Title: {response["Title"]}\nYear: {response["Year"]}\nActors: {response["Actors"]}\nPlot: {response["Plot"]}'
+    return f'Title: {response["Title"]}\nID: {response["imdbID"]}\nYear: {response["Year"]}\nActors: {response["Actors"]}\nPlot: {response["Plot"]}'
 
 # TODO Handle errors
 def get_search(title):
     return json.loads(urllib.request.urlopen(f'http://www.omdbapi.com/?apikey={SAVE_DATA.key}&s={urllib.parse.quote_plus(title)}').read().decode('utf-8'))
 
 class FindFrame(wx.Frame):
-    def __init__(self, *args, **kwds):
+    # NOTE: `results` should be a list of lists, the inner of which having comprising 'ID,' 'Title'
+    # and 'Year.' So basically it should look like this:
+    # [['ABC123', 'The Greatest Film', '2018'], ['XYZ789', 'The Worst Film', '4321'], ...etc...]
+    def __init__(self, results, *args, **kwds):
         # begin wxGlade: FindFrame.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT
         wx.Frame.__init__(self, *args, **kwds)
@@ -58,18 +61,22 @@ class FindFrame(wx.Frame):
         self.__set_properties()
         self.__do_layout()
 
-        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.list_ctrl_results_selected, self.list_ctrl_results)
         self.Bind(wx.EVT_BUTTON, self.button_cancel_clicked, self.button_cancel)
         self.Bind(wx.EVT_BUTTON, self.button_add_clicked, self.button_add)
         # end wxGlade
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
+        self.results = results
+
+        for result in self.results:
+            self.list_ctrl_results.Append(result[1:])
+
     def __set_properties(self):
         # begin wxGlade: FindFrame.__set_properties
         self.SetTitle("Find")
-        self.list_ctrl_results.InsertColumn(0, "Title", format=wx.LIST_FORMAT_LEFT, width=554)
-        self.list_ctrl_results.InsertColumn(1, "Year", format=wx.LIST_FORMAT_LEFT, width=-1)
+        self.list_ctrl_results.InsertColumn(0, "Title", format=wx.LIST_FORMAT_LEFT, width=470)
+        self.list_ctrl_results.InsertColumn(1, "Year", format=wx.LIST_FORMAT_LEFT, width=157)
         self.button_add.SetDefault()
         # end wxGlade
 
@@ -96,27 +103,29 @@ class FindFrame(wx.Frame):
         self.MakeModal(False)
         event.Skip()
 
-    def list_ctrl_results_selected(self, event):  # wxGlade: FindFrame.<event_handler>
-        print("Event handler 'list_ctrl_results_selected' not implemented!")
-        event.Skip()
-
     def button_cancel_clicked(self, event):  # wxGlade: FindFrame.<event_handler>
         self.Close()
         event.Skip()
 
     def button_add_clicked(self, event):  # wxGlade: FindFrame.<event_handler>
-        print("Event handler 'button_add_clicked' not implemented!")
+        # TODO Do something if the film's already there.
+        # TODO Do something if there's no film selected.
+        print(self.list_ctrl_results.GetFirstSelected())
+        self.GetParent().add_film(self.results[self.list_ctrl_results.GetFirstSelected()])
         event.Skip()
 
 # end of class FindFrame
 
 class MainFrame(wx.Frame):
-    def __init__(self, *args, **kwds):
+    # NOTE: `films` should be a list of lists, the inner of which having comprising the ID and
+    # Title.
+    # [['ABC123', 'The Greatest Film'], ['XYZ789', 'The Worst Film'], ...etc...]
+    def __init__(self, films, *args, **kwds):
         # begin wxGlade: MainFrame.__init__
         kwds["style"] = kwds.get("style", 0) | wx.CAPTION | wx.CLIP_CHILDREN | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX | wx.RESIZE_BORDER
         wx.Frame.__init__(self, *args, **kwds)
         self.SetSize((640, 480))
-        self.list_box_saved = wx.ListBox(self, wx.ID_ANY, choices=["Entry 1", "Entry 2", "Entry 3"])
+        self.list_box_saved = wx.ListBox(self, wx.ID_ANY, choices=[])
         self.button_find = wx.Button(self, wx.ID_FIND, "")
         self.text_ctrl_find = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_delete = wx.Button(self, wx.ID_DELETE, "")
@@ -129,6 +138,11 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.button_find_clicked, self.button_find)
         self.Bind(wx.EVT_BUTTON, self.button_delete_clicked, self.button_delete)
         # end wxGlade
+
+        self.films = films
+
+        for film in self.films:
+            self.list_box_saved.Append(film[1])
 
     def __set_properties(self):
         # begin wxGlade: MainFrame.__set_properties
@@ -153,15 +167,21 @@ class MainFrame(wx.Frame):
         self.Layout()
         # end wxGlade
 
+    # NOTE: `film` better bloody be a list that looks like ['ID', 'Title'].
+    def add_film(self, film):
+        self.films.append(film)
+        self.list_box_saved.Append(film[1])
+
     def button_find_clicked(self, event):  # wxGlade: MainFrame.<event_handler>
-        frame_find = FindFrame(self, wx.ID_ANY, "Find")
+        results = []
 
-        # TODO results["Response"] might be False
-        results = get_search(self.text_ctrl_find.GetLineText(0))
+        # TODO response["Response"] might be False
+        response = get_search(self.text_ctrl_find.GetLineText(0))
 
-        for result in results["Search"]:
-            frame_find.list_ctrl_results.Append([result["Title"], result["Year"]])
+        for result in response["Search"]:
+            results.append([result['imdbID'], result['Title'], result['Year']])
 
+        frame_find = FindFrame(results, self, wx.ID_ANY, 'Find')
         frame_find.MakeModal()
         frame_find.Show()
         event.Skip()
@@ -185,11 +205,7 @@ class MainFrame(wx.Frame):
 # end of class MainFrame
 
 app = wx.PySimpleApp()
-frame_main = MainFrame(None, wx.ID_ANY, "python-omdb")
-
-# Populate the listbox with the saved films
-frame_main.list_box_saved.Set(SAVE_DATA.films)
-
+frame_main = MainFrame(SAVE_DATA.films, None, wx.ID_ANY, "python-omdb")
 app.SetTopWindow(frame_main)
 frame_main.Show()
 app.MainLoop()
