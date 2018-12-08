@@ -24,20 +24,34 @@ NAME = os.path.basename(sys.argv[0])
 
 # Read their fokin saved data
 # Obviously this will actually be from a file later
-SAVE_DATA = SaveData()
+try:
+    SAVE_DATA = SaveData()
+except Exception as e:
+    print(f'{NAME}: warning: {str(e)}', file=sys.stderr)
+    wx.MessageBox(f'Warning: Could not read saved data: {str(e)}, using defaults', wx.ICON_ERROR)
 
-# Gets info for a movie title
+# Gets info for a movie by IMDb ID
 # Just as a string for now for testing
 # Returns an empty string if something went wrong
 # TODO Implement this properly
-def get_info(title):
+def get_info(ID):
     # Error handling is for pussies!
     # (error handling is not actually for pussies, fix this)
-    response = json.loads(urllib.request.urlopen(f'http://www.omdbapi.com/?apikey={SAVE_DATA.key}&t={urllib.parse.quote_plus(title)}').read().decode('utf-8'))
+
+    # TODO do all the actual error handling outside of here (set the label to a description of the
+    # error when there's an error, for example)
+
+    try:
+        response = json.loads(urllib.request.urlopen(f'http://www.omdbapi.com/?apikey={SAVE_DATA.key}&i={ID}').read().decode('utf-8'))
+    except Exception as e:
+        print(f'{NAME}: error: {str(e)}', file=sys.stderr)
+        wx.MessageBox(f'Error: {str(e)}', 'Error', wx.ICON_ERROR)
+        return None
 
     if response["Response"] == "False":
         print(f'{NAME}: error: {response["Error"]}', file=sys.stderr)
-        return str()
+        wx.MessageBox(f'Error: {response["Error"]}', 'Error', wx.ICON_ERROR)
+        return None
 
     return f'Title: {response["Title"]}\nID: {response["imdbID"]}\nYear: {response["Year"]}\nActors: {response["Actors"]}\nPlot: {response["Plot"]}'
 
@@ -46,7 +60,7 @@ def get_search(title):
     return json.loads(urllib.request.urlopen(f'http://www.omdbapi.com/?apikey={SAVE_DATA.key}&s={urllib.parse.quote_plus(title)}').read().decode('utf-8'))
 
 class FindFrame(wx.Frame):
-    # NOTE: `results` should be a list of lists, the inner of which having comprising 'ID,' 'Title'
+    # NOTE: `results` should be a list of lists, the inner of which comprising 'ID,' 'Title'
     # and 'Year.' So basically it should look like this:
     # [['ABC123', 'The Greatest Film', '2018'], ['XYZ789', 'The Worst Film', '4321'], ...etc...]
     def __init__(self, results, *args, **kwds):
@@ -179,16 +193,20 @@ class MainFrame(wx.Frame):
     def add_film(self, film):
         self.films.append(film)
         self.list_box_saved.SetSelection(self.list_box_saved.Append(film[1]))
-        self.update_info(film[1])
+        self.update_info(film[0])
         self.search_ctrl_find.Clear()
 
     def do_search(self, event):  # wxGlade: MainFrame.<event_handler>
         results = []
 
-        # TODO response["Response"] might be False
         response = get_search(event.GetString())
 
-        for result in response["Search"]:
+        if response['Response'] == 'False':
+            wx.MessageBox(f'Error: {response["Error"]}', 'Error', wx.ICON_ERROR)
+            event.Skip()
+            return
+
+        for result in response['Search']:
             results.append([result['imdbID'], result['Title'], result['Year']])
 
         frame_find = FindFrame(results, self, wx.ID_ANY, 'Find')
@@ -196,10 +214,10 @@ class MainFrame(wx.Frame):
         frame_find.Show()
         event.Skip()
 
-    def update_info(self, title):
-        result = get_info(title)
+    def update_info(self, ID):
+        result = get_info(ID)
 
-        if not result:
+        if result is None:
             self.label_info.SetLabel('<ERROR>')
         else:
             self.label_info.SetLabel(result)
@@ -213,7 +231,7 @@ class MainFrame(wx.Frame):
         del self.films[selection]
         event.Skip()
     def list_box_saved_clicked(self, event):  # wxGlade: MainFrame.<event_handler>
-        self.update_info(event.GetString())
+        self.update_info(self.films[self.list_box_saved.GetSelection()][0])
         event.Skip()
     def search_ctrl_find_enter_pressed(self, event):  # wxGlade: MainFrame.<event_handler>
         self.do_search(event)
@@ -226,3 +244,10 @@ frame_main = MainFrame(SAVE_DATA.films, None, wx.ID_ANY, "python-omdb")
 app.SetTopWindow(frame_main)
 frame_main.Show()
 app.MainLoop()
+
+# TODO Maybe do this before the program has closed, to give the user a chance to try again.
+try:
+    SAVE_DATA.save()
+except Exception as e:
+    print(f'{NAME}: error: {str(e)}', file=sys.stderr)
+    wx.MessageBox(f'Error: Could not write save data: {str(e)}', 'Error', wx.ICON_ERROR)
