@@ -132,7 +132,7 @@ class MainFrame(wx.Frame):
         self.search_ctrl_find = wx.SearchCtrl(self.window_all_pane_left, wx.ID_ANY, "", style=wx.TE_PROCESS_ENTER)
         self.button_delete = wx.Button(self.window_all_pane_left, wx.ID_DELETE, "")
         self.window_all_pane_right = wx.Panel(self.window_all, wx.ID_ANY)
-        self.label_info = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "Film information goes here")
+        self.label_info = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "No film selected")
 
         self.__set_properties()
         self.__do_layout()
@@ -152,6 +152,7 @@ class MainFrame(wx.Frame):
     def __set_properties(self):
         # begin wxGlade: MainFrame.__set_properties
         self.SetTitle("python-omdb")
+        self.search_ctrl_find.SetFocus()
         self.window_all.SetMinimumPaneSize(20)
         # end wxGlade
 
@@ -206,7 +207,10 @@ class MainFrame(wx.Frame):
         self.sizer_info.Layout() # reloads everything to show the new label text
 
     def button_delete_clicked(self, event):  # wxGlade: MainFrame.<event_handler>
-        print("Event handler 'button_delete_clicked' not implemented!")
+        # TODO do something if there's no film selected
+        selection = self.list_box_saved.GetSelection()
+        self.list_box_saved.Delete(selection)
+        del self.films[selection]
         event.Skip()
     def list_box_saved_clicked(self, event):  # wxGlade: MainFrame.<event_handler>
         self.update_info(event.GetString())
