@@ -110,8 +110,9 @@ class FindFrame(wx.Frame):
     def button_add_clicked(self, event):  # wxGlade: FindFrame.<event_handler>
         # TODO Do something if the film's already there.
         # TODO Do something if there's no film selected.
-        print(self.list_ctrl_results.GetFirstSelected())
-        self.GetParent().add_film(self.results[self.list_ctrl_results.GetFirstSelected()])
+        parent = self.GetParent()
+        parent.add_film(self.results[self.list_ctrl_results.GetFirstSelected()])
+        self.Close()
         event.Skip()
 
 # end of class FindFrame
@@ -125,19 +126,23 @@ class MainFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.CAPTION | wx.CLIP_CHILDREN | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX | wx.RESIZE_BORDER
         wx.Frame.__init__(self, *args, **kwds)
         self.SetSize((640, 480))
-        self.list_box_saved = wx.ListBox(self, wx.ID_ANY, choices=[])
-        self.button_find = wx.Button(self, wx.ID_FIND, "")
-        self.text_ctrl_find = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.button_delete = wx.Button(self, wx.ID_DELETE, "")
-        self.label_info = wx.StaticText(self, wx.ID_ANY, "Film information goes here")
+        self.window_all = wx.SplitterWindow(self, wx.ID_ANY)
+        self.window_all_pane_left = wx.Panel(self.window_all, wx.ID_ANY)
+        self.list_box_saved = wx.ListBox(self.window_all_pane_left, wx.ID_ANY, choices=[])
+        self.search_ctrl_find = wx.SearchCtrl(self.window_all_pane_left, wx.ID_ANY, "", style=wx.TE_PROCESS_ENTER)
+        self.button_delete = wx.Button(self.window_all_pane_left, wx.ID_DELETE, "")
+        self.window_all_pane_right = wx.Panel(self.window_all, wx.ID_ANY)
+        self.label_info = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "Film information goes here")
 
         self.__set_properties()
         self.__do_layout()
 
         self.Bind(wx.EVT_LISTBOX, self.list_box_saved_clicked, self.list_box_saved)
-        self.Bind(wx.EVT_BUTTON, self.button_find_clicked, self.button_find)
+        self.Bind(wx.EVT_TEXT_ENTER, self.search_ctrl_find_enter_pressed, self.search_ctrl_find)
         self.Bind(wx.EVT_BUTTON, self.button_delete_clicked, self.button_delete)
         # end wxGlade
+
+        self.Bind(wx.EVT_SEARCHCTRL_SEARCH_BTN, self.do_search, self.search_ctrl_find)
 
         self.films = films
 
@@ -147,22 +152,24 @@ class MainFrame(wx.Frame):
     def __set_properties(self):
         # begin wxGlade: MainFrame.__set_properties
         self.SetTitle("python-omdb")
+        self.window_all.SetMinimumPaneSize(20)
         # end wxGlade
 
     def __do_layout(self):
         # begin wxGlade: MainFrame.__do_layout
         sizer_all = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_right = wx.BoxSizer(wx.VERTICAL)
+        self.sizer_info = wx.BoxSizer(wx.VERTICAL)
         sizer_list = wx.BoxSizer(wx.VERTICAL)
         sizer_controls = wx.BoxSizer(wx.HORIZONTAL)
         sizer_list.Add(self.list_box_saved, 1, wx.EXPAND, 0)
-        sizer_controls.Add(self.button_find, 0, wx.ALIGN_CENTER | wx.ALL, 3)
-        sizer_controls.Add(self.text_ctrl_find, 1, wx.ALL, 3)
+        sizer_controls.Add(self.search_ctrl_find, 1, wx.ALL | wx.EXPAND, 3)
         sizer_controls.Add(self.button_delete, 0, wx.ALIGN_CENTER | wx.ALL, 3)
         sizer_list.Add(sizer_controls, 0, wx.EXPAND, 0)
-        sizer_all.Add(sizer_list, 1, wx.EXPAND, 0)
-        self.sizer_right.Add(self.label_info, 0, wx.ALL | wx.EXPAND, 3)
-        sizer_all.Add(self.sizer_right, 1, wx.ALL | wx.EXPAND, 0)
+        self.window_all_pane_left.SetSizer(sizer_list)
+        self.sizer_info.Add(self.label_info, 0, wx.ALL | wx.EXPAND, 3)
+        self.window_all_pane_right.SetSizer(self.sizer_info)
+        self.window_all.SplitVertically(self.window_all_pane_left, self.window_all_pane_right)
+        sizer_all.Add(self.window_all, 1, wx.EXPAND, 0)
         self.SetSizer(sizer_all)
         self.Layout()
         # end wxGlade
@@ -170,13 +177,15 @@ class MainFrame(wx.Frame):
     # NOTE: `film` better bloody be a list that looks like ['ID', 'Title'].
     def add_film(self, film):
         self.films.append(film)
-        self.list_box_saved.Append(film[1])
+        self.list_box_saved.SetSelection(self.list_box_saved.Append(film[1]))
+        self.update_info(film[1])
+        self.search_ctrl_find.Clear()
 
-    def button_find_clicked(self, event):  # wxGlade: MainFrame.<event_handler>
+    def do_search(self, event):  # wxGlade: MainFrame.<event_handler>
         results = []
 
         # TODO response["Response"] might be False
-        response = get_search(self.text_ctrl_find.GetLineText(0))
+        response = get_search(event.GetString())
 
         for result in response["Search"]:
             results.append([result['imdbID'], result['Title'], result['Year']])
@@ -186,25 +195,29 @@ class MainFrame(wx.Frame):
         frame_find.Show()
         event.Skip()
 
-    def button_delete_clicked(self, event):  # wxGlade: MainFrame.<event_handler>
-        print("Event handler 'button_delete_clicked' not implemented!")
-        event.Skip()
-    def list_box_saved_clicked(self, event):  # wxGlade: MainFrame.<event_handler>
-
-        result = get_info(event.GetString())
+    def update_info(self, title):
+        result = get_info(title)
 
         if not result:
             self.label_info.SetLabel('<ERROR>')
         else:
             self.label_info.SetLabel(result)
 
-        self.sizer_right.Layout() # reloads everything to show the new label text
+        self.sizer_info.Layout() # reloads everything to show the new label text
 
+    def button_delete_clicked(self, event):  # wxGlade: MainFrame.<event_handler>
+        print("Event handler 'button_delete_clicked' not implemented!")
         event.Skip()
-
+    def list_box_saved_clicked(self, event):  # wxGlade: MainFrame.<event_handler>
+        self.update_info(event.GetString())
+        event.Skip()
+    def search_ctrl_find_enter_pressed(self, event):  # wxGlade: MainFrame.<event_handler>
+        self.do_search(event)
+        event.Skip()
 # end of class MainFrame
 
-app = wx.PySimpleApp()
+# app = wx.PySimpleApp()
+app = wx.App()
 frame_main = MainFrame(SAVE_DATA.films, None, wx.ID_ANY, "python-omdb")
 app.SetTopWindow(frame_main)
 frame_main.Show()
