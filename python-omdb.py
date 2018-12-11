@@ -259,14 +259,16 @@ class MainFrame(wx.Frame):
         self.button_delete = wx.Button(self.window_all_pane_left, wx.ID_DELETE, "")
         self.window_all_pane_right = wx.ScrolledWindow(self.window_all, wx.ID_ANY, style=wx.TAB_TRAVERSAL)
         self.bitmap_poster = wx.StaticBitmap(self.window_all_pane_right, wx.ID_ANY, wx.EmptyBitmap(135, 205))
-        self.label_rating = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, u"\u2605\u2605\u2605\u2605\u2605", style=wx.ALIGN_CENTER)
-        self.label_title = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "Film Title")
-        self.label_genre = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "Genre")
-        self.label_released = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "Released")
-        self.label_runtime = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "Runtime")
-        self.label_director = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "Directed by Director")
-        self.label_plot = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "A gr8 film.")
-        self.label_actors = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "Ethan Ansell")
+        self.label_rating = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "", style=wx.ALIGN_CENTER)
+        self.label_title = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "No film selected")
+        self.label_genre = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "")
+        self.label_released = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "")
+        self.label_runtime = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "")
+        self.label_director = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "")
+        self.label_plot_heading = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "")
+        self.label_plot = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "")
+        self.label_actors_heading = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "")
+        self.label_actors = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "")
 
         self.__set_properties()
         self.__do_layout()
@@ -281,6 +283,8 @@ class MainFrame(wx.Frame):
 
         self.Bind(wx.EVT_SEARCHCTRL_SEARCH_BTN, self.do_search, self.search_ctrl_find)
 
+        # wxPython is stupid for some reason and the image isn't actually blank sometimes, instead it contains random junk data
+        self.blank_poster()
         self.rewrap_labels()
 
         # Populate the listbox
@@ -296,6 +300,8 @@ class MainFrame(wx.Frame):
         self.bitmap_poster.SetMinSize((135, 205))
         self.label_rating.SetFont(wx.Font(20, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, ""))
         self.label_title.SetFont(wx.Font(14, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
+        self.label_plot_heading.SetFont(wx.Font(11, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
+        self.label_actors_heading.SetFont(wx.Font(11, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
         self.window_all_pane_right.SetScrollRate(10, 10)
         self.window_all.SetMinimumPaneSize(20)
         # end wxGlade
@@ -329,13 +335,9 @@ class MainFrame(wx.Frame):
         self.sizer_title.Add(sizer_info, 1, wx.EXPAND, 0)
         sizer_poster_info.Add(self.sizer_title, 1, wx.EXPAND, 0)
         self.sizer_right.Add(sizer_poster_info, 0, wx.EXPAND, 0)
-        label_plot_heading = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "Plot")
-        label_plot_heading.SetFont(wx.Font(11, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
-        self.sizer_plot_actors.Add(label_plot_heading, 0, wx.ALL, 5)
+        self.sizer_plot_actors.Add(self.label_plot_heading, 0, wx.ALL, 5)
         self.sizer_plot_actors.Add(self.label_plot, 0, wx.ALL, 5)
-        label_actors_heading = wx.StaticText(self.window_all_pane_right, wx.ID_ANY, "Actors")
-        label_actors_heading.SetFont(wx.Font(11, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
-        self.sizer_plot_actors.Add(label_actors_heading, 0, wx.ALL, 5)
+        self.sizer_plot_actors.Add(self.label_actors_heading, 0, wx.ALL, 5)
         self.sizer_plot_actors.Add(self.label_actors, 0, wx.ALL, 5)
         self.sizer_right.Add(self.sizer_plot_actors, 0, wx.ALL | wx.EXPAND, 0)
         self.window_all_pane_right.SetSizer(self.sizer_right)
@@ -389,6 +391,10 @@ class MainFrame(wx.Frame):
         self.label_rating.SetLabel(('\u2605' * info.rating) if info.rating is not None else 'Unknown')
         self.label_plot.SetLabel(info.plot or 'Unknown')
         self.label_actors.SetLabel(info.actors or 'Unknown')
+
+        # These should be blank at the start and filled in after that. Here's my stupid and ridiculous way of doing that.
+        self.label_plot_heading.SetLabel('Plot')
+        self.label_actors_heading.SetLabel('Actors')
 
         if info.poster is None:
             self.blank_poster()
