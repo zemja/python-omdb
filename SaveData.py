@@ -17,22 +17,13 @@ class SaveData:
 
         self.path = os.path.join(Path.home(), '.python-omdb')
 
-        # TODO Eventually, these will default to None. If you try to get films without a key, it will nag you to enter them.
         self.keys = {
-            'omdb': 'a1078617',
-            'tmdb': '6ae8fd6cf7314df0457a686f92fc25e0'
+            'omdb': None,
+            'tmdb': None
         }
 
-        # TODO Have this default to empty.
-        # We only bother storing titles to populate the main listbox so it looks good, without having to
-        # spam the API for every film in the wishlist every time we open the program.
-        # But we actually use the IDs to query the database when we select something in the listbox.
-        # Obviously one magical day we'll be able to enter our own.
-        self.films = [
-            ['tt0133093', 'The Matrix'],
-            ['tt0317705', 'The Incredibles'],
-            ['tt1270797', 'Venom']
-        ]
+        # Should be [['ID', 'Title'], ['ID', 'Title'] ...etc... ]
+        self.films = []
 
         try:
             with open(self.path, 'rb') as file:
