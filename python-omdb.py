@@ -55,7 +55,7 @@ class APIFrame(wx.Frame):
         # begin wxGlade: APIFrame.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.SetSize((630, 180))
+        self.SetSize((699, 410))
         self.radio_btn_omdb = wx.RadioButton(self, wx.ID_ANY, "")
         self.text_ctrl_omdb = wx.TextCtrl(self, wx.ID_ANY, "")
         self.button_key_omdb = wx.Button(self, wx.ID_ANY, "Get key")
@@ -109,7 +109,7 @@ class APIFrame(wx.Frame):
         label_tmdb.SetMinSize((50, 21))
         sizer_tmdb.Add(label_tmdb, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
         sizer_tmdb.Add(self.text_ctrl_tmdb, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
-        sizer_tmdb.Add(self.button_key_tmdb, 0, wx.ALL, 5)
+        sizer_tmdb.Add(self.button_key_tmdb, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
         sizer_rows.Add(sizer_tmdb, 1, wx.EXPAND, 0)
         sizer_rows.Add(self.button_ok, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
         self.SetSizer(sizer_rows)
@@ -238,8 +238,8 @@ class MainFrame(wx.Frame):
         # begin wxGlade: MainFrame.__init__
         kwds["style"] = kwds.get("style", 0) | wx.CAPTION | wx.CLIP_CHILDREN | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX | wx.RESIZE_BORDER
         wx.Frame.__init__(self, *args, **kwds)
-        self.SetSize((830, 600))
-
+        self.SetSize((1920, 1057))
+        
         # Menu Bar
         self.frame_main_menubar = wx.MenuBar()
         wxglade_tmp_menu = wx.Menu()
